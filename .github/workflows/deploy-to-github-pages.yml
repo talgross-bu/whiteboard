@@ -1,0 +1,73 @@
+# Builds the site and publishes it to GitHub Pages at
+# https://talgross-bu.github.io/whiteboard/ on every push to main.
+#
+# The two Neon endpoint URLs come from repository variables rather than
+# secrets: they are public endpoints that end up in the built JavaScript
+# either way, but keeping them out of the source tree means the repository
+# carries no configuration that has to be edited to point somewhere else.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish rather than cancelling it halfway.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install the pinned dependencies
+        run: npm ci
+
+      - name: Fail early if the Neon endpoints are not configured
+        env:
+          VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
+          VITE_NEON_DATA_API_URL: ${{ vars.VITE_NEON_DATA_API_URL }}
+        run: |
+          if [ -z "$VITE_NEON_AUTH_URL" ] || [ -z "$VITE_NEON_DATA_API_URL" ]; then
+            echo "Set the repository variables VITE_NEON_AUTH_URL and VITE_NEON_DATA_API_URL"
+            echo "under Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+
+      - name: Build the site
+        env:
+          VITE_NEON_AUTH_URL: ${{ vars.VITE_NEON_AUTH_URL }}
+          VITE_NEON_DATA_API_URL: ${{ vars.VITE_NEON_DATA_API_URL }}
+        run: npm run build
+
+      - name: Upload the built site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

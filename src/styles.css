@@ -1,0 +1,469 @@
+/*
+ * Layout and appearance.  Two rules matter more than the rest:
+ * the board keeps a 4:3 shape at every width, and touch gestures on the
+ * board never scroll the page.
+ */
+
+:root {
+  --ink: #16181d;
+  --muted: #5c636e;
+  --line: #d6d9df;
+  --panel: #ffffff;
+  --page: #f2f3f5;
+  --accent: #2851c2;
+  --danger: #c2281f;
+  --touch-target: 44px;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  /* Stop the rubber-band bounce that reads as the page moving under a stroke. */
+  overscroll-behavior: none;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  min-height: var(--touch-target);
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type='text'],
+input[type='password'] {
+  font: inherit;
+  min-height: var(--touch-target);
+  padding: 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+/* ---------- Student page ---------- */
+
+.student-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.student-page__header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.student-page__status {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ---------- Name and submit ---------- */
+
+.submit-panel {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.submit-panel__name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 16rem;
+}
+
+.submit-panel__name-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.submit-panel__button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+  min-width: 11rem;
+}
+
+.submit-panel__message {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.submit-panel__message--saved {
+  color: #00634a;
+}
+
+.submit-panel__message--error {
+  color: var(--danger);
+}
+
+.submit-panel__message--idle,
+.submit-panel__message--saving {
+  color: var(--muted);
+}
+
+/* ---------- The board ---------- */
+
+.drawing-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.drawing-board__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Without this, dragging a finger across the board scrolls the page. */
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.drawing-board__label-input {
+  position: absolute;
+  transform: translateY(-0.85em);
+  min-height: 0;
+  padding: 0.1rem 0.25rem;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  max-width: 60%;
+}
+
+/* ---------- Tools ---------- */
+
+.tool-palette {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tool-palette__group {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.tool-button {
+  min-width: var(--touch-target);
+  padding: 0 0.5rem;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-button[aria-pressed='true'] {
+  background: #e7ecfb;
+  border-color: var(--accent);
+}
+
+.tool-button--wide {
+  font-size: 0.95rem;
+  border-color: var(--line);
+}
+
+.tool-button__swatch {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.tool-button__thickness {
+  display: block;
+  width: 24px;
+  border-radius: 3px;
+}
+
+/* ---------- Inline confirmations ---------- */
+
+.confirm-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  max-width: min(46rem, calc(100vw - 2rem));
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.confirm-bar p {
+  margin: 0;
+  flex: 1 1 14rem;
+}
+
+.confirm-bar__button--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ---------- Padlock ---------- */
+
+.padlock {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+.padlock__button {
+  min-width: var(--touch-target);
+  border-radius: 50%;
+  border-color: var(--line);
+  font-size: 1.1rem;
+}
+
+.padlock__form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.padlock__label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.padlock__error {
+  flex-basis: 100%;
+  text-align: center;
+  margin: 0;
+  color: var(--danger);
+}
+
+/* ---------- Instructor gallery ---------- */
+
+.instructor-gallery {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1rem 3rem;
+}
+
+.instructor-gallery__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.instructor-gallery__count {
+  margin: 0;
+  color: var(--muted);
+}
+
+.instructor-gallery__controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.instructor-gallery__problem {
+  margin: 0;
+  color: var(--danger);
+}
+
+.instructor-gallery__empty {
+  color: var(--muted);
+}
+
+.instructor-gallery__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.gallery-card {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  text-align: left;
+}
+
+.gallery-card__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.gallery-card__image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.gallery-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+/* ---------- Presentation ---------- */
+
+/* Fixed to the viewport, so this looks the same whether or not the browser
+   granted a true full-screen request. */
+.presentation {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: #101216;
+  color: #ffffff;
+}
+
+.presentation__bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #2a2e37;
+}
+
+.presentation__name {
+  margin: 0;
+  font-size: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.presentation__counter {
+  color: #a8aeb9;
+}
+
+.presentation__controls {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.presentation__controls button {
+  background: #1d212a;
+  border-color: #353a45;
+  color: #ffffff;
+}
+
+.presentation__note {
+  color: #a8aeb9;
+  font-size: 0.9rem;
+  max-width: 18rem;
+}
+
+.presentation__stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  min-height: 0;
+}
+
+.presentation__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 6px;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 640px) {
+  .student-page {
+    padding: 0.75rem 0.75rem 3rem;
+  }
+
+  .submit-panel__button {
+    flex: 1 1 100%;
+  }
+
+  .tool-palette {
+    gap: 0.5rem;
+  }
+
+  .presentation__name {
+    font-size: 1.15rem;
+  }
+}

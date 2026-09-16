@@ -1,0 +1,30 @@
+{
+  "name": "tals-whiteboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A classroom whiteboard: students draw and submit, the instructor unlocks a gallery and presents.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "probe-neon": "tsx scripts/probe-neon-anonymous-access.ts",
+    "load-test": "tsx scripts/run-synthetic-load-test.ts"
+  },
+  "dependencies": {
+    "@neondatabase/neon-js": "0.7.0-beta",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "4.7.0",
+    "dotenv": "17.4.2",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vite": "6.4.3"
+  }
+}
