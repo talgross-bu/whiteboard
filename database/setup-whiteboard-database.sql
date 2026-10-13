@@ -47,6 +47,18 @@ insert into whiteboard.board_settings (settings_row_id)
 values (1)
 on conflict (settings_row_id) do nothing;
 
+-- Which picture students start from.  Added after the table first went
+-- live, hence the separate statements rather than a column above.
+alter table whiteboard.board_settings
+  add column if not exists active_template text not null default 'blank';
+
+alter table whiteboard.board_settings
+  drop constraint if exists board_settings_active_template_is_known;
+
+alter table whiteboard.board_settings
+  add constraint board_settings_active_template_is_known
+  check (active_template in ('blank', 'ltch', 'fish', 'supply_demand'));
+
 create table if not exists whiteboard.submissions (
   browser_submission_id uuid        not null,
   gallery_generation    bigint      not null,
@@ -107,6 +119,7 @@ begin
   return jsonb_build_object(
     'submissions_are_open', the_settings.submissions_are_open,
     'gallery_generation',   the_settings.gallery_generation,
+    'active_template',      the_settings.active_template,
     'submission_count',     (select count(*)
                              from whiteboard.submissions
                              where gallery_generation = the_settings.gallery_generation),
@@ -342,11 +355,16 @@ $$;
 
 
 ------------------------------------------------------------
---  Open or close submissions
+--  Open or close submissions, optionally choosing a template
 ------------------------------------------------------------
 
+-- The one-argument version predates templates.  Dropping it stops the
+-- Data API from seeing two functions with the same name.
+drop function if exists public.whiteboard_set_submissions_open(boolean);
+
 create or replace function public.whiteboard_set_submissions_open(
-  p_submissions_are_open boolean
+  p_submissions_are_open boolean,
+  p_active_template      text default null
 )
 returns jsonb
 language plpgsql
@@ -357,15 +375,18 @@ as $$
 declare
   the_settings whiteboard.board_settings;
 begin
+  -- A null template, which is what closing sends, keeps the current one.
   update whiteboard.board_settings
   set submissions_are_open = coalesce(p_submissions_are_open, false),
+      active_template      = coalesce(p_active_template, active_template),
       settings_updated_at  = now()
   where settings_row_id = 1
   returning * into the_settings;
 
   return jsonb_build_object(
     'submissions_are_open', the_settings.submissions_are_open,
-    'gallery_generation',   the_settings.gallery_generation
+    'gallery_generation',   the_settings.gallery_generation,
+    'active_template',      the_settings.active_template
   );
 end;
 $$;
@@ -428,7 +449,7 @@ declare
     'public.whiteboard_gallery_index()',
     'public.whiteboard_thumbnails(uuid[])',
     'public.whiteboard_full_image(uuid)',
-    'public.whiteboard_set_submissions_open(boolean)',
+    'public.whiteboard_set_submissions_open(boolean, text)',
     'public.whiteboard_clear_all()'
   ];
 begin

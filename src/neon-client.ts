@@ -8,6 +8,7 @@
  */
 
 import { createClient } from '@neondatabase/neon-js'
+import type { TemplateId } from './drawing/board-templates.ts'
 
 const auth_url = import.meta.env.VITE_NEON_AUTH_URL
 const data_api_url = import.meta.env.VITE_NEON_DATA_API_URL
@@ -56,6 +57,7 @@ async function call_database_function<ResultType>(
 export interface WhiteboardStatus {
   submissions_are_open: boolean
   gallery_generation: number
+  active_template: TemplateId
   submission_count: number
   latest_change_at: string | null
 }
@@ -140,11 +142,14 @@ export function fetch_full_image(browser_submission_id: string): Promise<FullIma
   })
 }
 
+/** Leaving out the template, as closing does, keeps the current one. */
 export function set_submissions_open(
   submissions_are_open: boolean,
-): Promise<{ submissions_are_open: boolean; gallery_generation: number }> {
+  active_template: TemplateId | null = null,
+): Promise<{ submissions_are_open: boolean; gallery_generation: number; active_template: TemplateId }> {
   return call_database_function('whiteboard_set_submissions_open', {
     p_submissions_are_open: submissions_are_open,
+    p_active_template: active_template,
   })
 }
 

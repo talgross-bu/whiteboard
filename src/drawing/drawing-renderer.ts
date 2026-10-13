@@ -5,6 +5,7 @@
  */
 
 import type { Stroke } from './drawing-types.ts'
+import { render_template, type TemplateId } from './board-templates.ts'
 import { BOARD_WIDTH_IN_PIXELS, BOARD_HEIGHT_IN_PIXELS } from '../whiteboard-configuration.ts'
 
 /** A label's stored width is its thickness setting; this turns it into a font size. */
@@ -84,7 +85,7 @@ function draw_freehand(
   context.stroke()
 }
 
-function draw_straight_line(
+export function draw_straight_line(
   context: CanvasRenderingContext2D,
   from: { x: number; y: number },
   to: { x: number; y: number },
@@ -99,7 +100,7 @@ function draw_straight_line(
   context.stroke()
 }
 
-function draw_arrow_head(
+export function draw_arrow_head(
   context: CanvasRenderingContext2D,
   from: { x: number; y: number },
   to: { x: number; y: number },
@@ -152,7 +153,8 @@ function new_canvas(width: number, height: number): [HTMLCanvasElement, CanvasRe
 
 /**
  * Replays the strokes at full export resolution onto a white background
- * and hands back the PNG as base64, without the data-URL prefix.
+ * with the template beneath them, and hands back the PNG as base64,
+ * without the data-URL prefix.
  *
  * The ink goes on a transparent layer first.  Erasing works by cutting
  * holes out of what is already drawn, so if the white background shared
@@ -161,6 +163,7 @@ function new_canvas(width: number, height: number): [HTMLCanvasElement, CanvasRe
  */
 export function render_strokes_to_png_base64(
   strokes: Stroke[],
+  template_id: TemplateId,
   output_width: number,
   output_height: number,
 ): string {
@@ -170,6 +173,7 @@ export function render_strokes_to_png_base64(
   const [output_canvas, output_context] = new_canvas(output_width, output_height)
   output_context.fillStyle = '#FFFFFF'
   output_context.fillRect(0, 0, output_width, output_height)
+  render_template(output_context, template_id, output_width / BOARD_WIDTH_IN_PIXELS)
   output_context.drawImage(ink_layer, 0, 0)
 
   return output_canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '')

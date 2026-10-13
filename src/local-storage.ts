@@ -8,9 +8,11 @@
  */
 
 import type { Stroke } from './drawing/drawing-types.ts'
+import { is_template_id, type TemplateId } from './drawing/board-templates.ts'
 
 const SPOKESPERSON_NAME_KEY = 'whiteboard.spokesperson_name'
 const DRAFT_STROKES_KEY = 'whiteboard.draft_strokes'
+const DRAFT_TEMPLATE_KEY = 'whiteboard.draft_template'
 const BROWSER_SUBMISSION_ID_KEY = 'whiteboard.browser_submission_id'
 const LAST_SUBMITTED_GENERATION_KEY = 'whiteboard.last_submitted_generation'
 const INSTRUCTOR_UNLOCKED_KEY = 'whiteboard.instructor_unlocked'
@@ -56,6 +58,18 @@ export function load_draft_strokes(): Stroke[] {
 
 export function save_draft_strokes(strokes: Stroke[]): void {
   write_local(DRAFT_STROKES_KEY, JSON.stringify(strokes))
+}
+
+/* ---------- The template the draft was drawn on ---------- */
+
+/** Drafts from before templates existed were all drawn on a blank board. */
+export function load_draft_template(): TemplateId {
+  const stored = read_local(DRAFT_TEMPLATE_KEY)
+  return is_template_id(stored) ? stored : 'blank'
+}
+
+export function save_draft_template(template_id: TemplateId): void {
+  write_local(DRAFT_TEMPLATE_KEY, template_id)
 }
 
 /* ---------- This browser's identity in the gallery ---------- */

@@ -1,7 +1,7 @@
 /*
- * The board the student draws on.  It is a transparent canvas over a white
- * panel, so the eraser can cut holes in the ink without cutting a hole in
- * the background.  Pointer positions are converted straight into board
+ * The board the student draws on.  It is a transparent canvas over the
+ * template's canvas, which sits over a white panel, so the eraser can cut
+ * holes in the ink without cutting a hole in the template or the background.  Pointer positions are converted straight into board
  * coordinates, which is why a resize or a rotation changes nothing.
  */
 
@@ -9,16 +9,30 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { BoardPoint } from '../drawing/drawing-types.ts'
 import type { DrawingBoard } from '../drawing/use-drawing-board.ts'
 import { render_strokes, LABEL_FONT_SIZE_MULTIPLIER } from '../drawing/drawing-renderer.ts'
+import { render_template, type TemplateId } from '../drawing/board-templates.ts'
 import { BOARD_WIDTH_IN_PIXELS, BOARD_HEIGHT_IN_PIXELS } from '../whiteboard-configuration.ts'
 
 const MAXIMUM_LABEL_CHARACTERS = 80
 
 interface DrawingCanvasProperties {
   board: DrawingBoard
+  template_id: TemplateId
 }
 
-export function DrawingCanvas({ board }: DrawingCanvasProperties) {
+/* Matches a canvas's backing store to its displayed size.  Assigning width
+ * or height wipes the canvas and reallocates its backing store, so it only
+ * does so when the size has actually changed. */
+function match_backing_store(canvas: HTMLCanvasElement, size: { width: number; height: number }) {
+  const device_pixel_ratio = window.devicePixelRatio || 1
+  const wanted_width = Math.round(size.width * device_pixel_ratio)
+  const wanted_height = Math.round(size.height * device_pixel_ratio)
+  if (canvas.width !== wanted_width) canvas.width = wanted_width
+  if (canvas.height !== wanted_height) canvas.height = wanted_height
+}
+
+export function DrawingCanvas({ board, template_id }: DrawingCanvasProperties) {
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
+  const template_canvas_ref = useRef<HTMLCanvasElement | null>(null)
   const [canvas_size, set_canvas_size] = useState({ width: 0, height: 0 })
   const [label_anchor, set_label_anchor] = useState<BoardPoint | null>(null)
   const [label_text, set_label_text] = useState('')
@@ -60,13 +74,7 @@ export function DrawingCanvas({ board }: DrawingCanvasProperties) {
     const canvas = canvas_ref.current
     if (!canvas || canvas_size.width === 0) return
 
-    // Assigning width or height wipes the canvas and reallocates its
-    // backing store, so only do it when the size has actually changed.
-    const device_pixel_ratio = window.devicePixelRatio || 1
-    const wanted_width = Math.round(canvas_size.width * device_pixel_ratio)
-    const wanted_height = Math.round(canvas_size.height * device_pixel_ratio)
-    if (canvas.width !== wanted_width) canvas.width = wanted_width
-    if (canvas.height !== wanted_height) canvas.height = wanted_height
+    match_backing_store(canvas, canvas_size)
 
     const context = canvas.getContext('2d')
     if (!context) return
@@ -79,6 +87,20 @@ export function DrawingCanvas({ board }: DrawingCanvasProperties) {
 
     render_strokes(context, visible_strokes, canvas.width / BOARD_WIDTH_IN_PIXELS)
   }, [board.strokes, board.stroke_in_progress, canvas_size])
+
+  /* The template only changes with the size or the instructor's choice. */
+  useEffect(() => {
+    const canvas = template_canvas_ref.current
+    if (!canvas || canvas_size.width === 0) return
+
+    match_backing_store(canvas, canvas_size)
+
+    const context = canvas.getContext('2d')
+    if (!context) return
+
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    render_template(context, template_id, canvas.width / BOARD_WIDTH_IN_PIXELS)
+  }, [template_id, canvas_size])
 
   const board_point_from_event = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const box = event.currentTarget.getBoundingClientRect()
@@ -161,6 +183,8 @@ export function DrawingCanvas({ board }: DrawingCanvasProperties) {
 
   return (
     <div className="drawing-board">
+      <canvas ref={template_canvas_ref} className="drawing-board__template" aria-hidden="true" />
+
       <canvas
         ref={canvas_ref}
         className="drawing-board__canvas"

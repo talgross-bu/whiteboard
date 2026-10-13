@@ -1,7 +1,7 @@
 /*
- * What a student sees: a title, a name, a blank board, the tools, and
- * Submit.  Nothing is drawn on the board to begin with -- no grid, no
- * axes, no instructions.
+ * What a student sees: a title, a name, the board, the tools, and Submit.
+ * The board starts from whichever template the instructor chose when
+ * opening submissions -- blank, or a set of labelled axes.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -11,13 +11,16 @@ import { SubmitPanel, type SubmissionPhase } from './SubmitPanel.tsx'
 import { use_drawing_board } from '../drawing/use-drawing-board.ts'
 import { render_strokes_to_png_base64 } from '../drawing/drawing-renderer.ts'
 import type { Stroke } from '../drawing/drawing-types.ts'
+import { is_template_id, type TemplateId } from '../drawing/board-templates.ts'
 import { fetch_whiteboard_status, submit_drawing } from '../neon-client.ts'
 import {
   load_draft_strokes,
+  load_draft_template,
   load_last_submitted_generation,
   load_or_create_browser_submission_id,
   load_spokesperson_name,
   save_draft_strokes,
+  save_draft_template,
   save_last_submitted_generation,
   save_spokesperson_name,
 } from '../local-storage.ts'
@@ -44,6 +47,10 @@ export function StudentPage() {
   const [message, set_message] = useState('')
   const [submissions_are_open, set_submissions_are_open] = useState<boolean | null>(null)
   const [confirming_clear, set_confirming_clear] = useState(false)
+
+  /* Starts as whatever the saved draft was drawn on, so a reload shows the
+   * right picture before the database has answered. */
+  const [active_template, set_active_template] = useState<TemplateId>(load_draft_template)
 
   const browser_submission_id = useRef(load_or_create_browser_submission_id()).current
 
@@ -82,7 +89,9 @@ export function StudentPage() {
     save_spokesperson_name(spokesperson_name)
   }, [spokesperson_name])
 
-  /* ---------- Follow the open/closed setting ---------- */
+  /* ---------- Follow the open/closed setting and the template ---------- */
+
+  const { replace_all_strokes } = board
 
   const refresh_status = useCallback(async () => {
     try {
@@ -90,13 +99,26 @@ export function StudentPage() {
       set_submissions_are_open(status.submissions_are_open)
       gallery_generation.current = status.gallery_generation
 
+      // A new template means a new activity, and an old sketch on top of
+      // new axes would only confuse.  Wiping also empties the undo history,
+      // so the old drawing cannot be brought back over the new template.
+      const server_template = is_template_id(status.active_template) ? status.active_template : 'blank'
+      if (server_template !== load_draft_template()) {
+        replace_all_strokes([])
+        save_draft_template(server_template)
+        set_submitted_strokes(null)
+        set_phase('idle')
+        set_message('Your instructor started a new activity, so the board has been reset.')
+      }
+      set_active_template(server_template)
+
       // A submission from an earlier gallery is no longer on display.
       const last_submitted = load_last_submitted_generation()
       set_has_submitted_before(last_submitted === status.gallery_generation)
     } catch {
       /* Leave the last known state alone; Submit will report the truth. */
     }
-  }, [])
+  }, [replace_all_strokes])
 
   useEffect(() => {
     void refresh_status()
@@ -142,11 +164,13 @@ export function StudentPage() {
     try {
       const full_png_base64 = render_strokes_to_png_base64(
         strokes_being_sent,
+        active_template,
         BOARD_WIDTH_IN_PIXELS,
         BOARD_HEIGHT_IN_PIXELS,
       )
       const thumbnail_png_base64 = render_strokes_to_png_base64(
         strokes_being_sent,
+        active_template,
         THUMBNAIL_WIDTH_IN_PIXELS,
         THUMBNAIL_HEIGHT_IN_PIXELS,
       )
@@ -248,7 +272,7 @@ export function StudentPage() {
         on_submit={handle_submit}
       />
 
-      <DrawingCanvas board={board} />
+      <DrawingCanvas board={board} template_id={active_template} />
 
       <ToolPalette board={board} on_request_clear={handle_clear_request} />
 
